@@ -26,7 +26,9 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 
 class LocalFile:
+
     def __init__(self, user_id, kb_id, file: Union[File, str], file_id, file_name, embedding, is_url=False, in_milvus=False):
+
         self.user_id = user_id
         self.kb_id = kb_id
         self.file_id = file_id
@@ -36,6 +38,7 @@ class LocalFile:
         self.url = None
         self.in_milvus = in_milvus
         self.file_name = file_name
+
         if is_url:
             self.url = file
             self.file_path = "URL"
@@ -53,55 +56,98 @@ class LocalFile:
                 self.file_content = file.body
             with open(self.file_path, "wb+") as f:
                 f.write(self.file_content)
+
         debug_logger.info(f'success init localfile {self.file_name}')
 
-    def split_file_to_docs(self, ocr_engine: Callable, sentence_size=SENTENCE_SIZE,
-                           using_zh_title_enhance=ZH_TITLE_ENHANCE):
+    def split_file_to_docs(self, ocr_engine: Callable, sentence_size=SENTENCE_SIZE, using_zh_title_enhance=ZH_TITLE_ENHANCE):
+
         if self.url:
+
             debug_logger.info("load url: {}".format(self.url))
+
             loader = MyRecursiveUrlLoader(url=self.url)
+
             textsplitter = ChineseTextSplitter(pdf=False, sentence_size=sentence_size)
+
             docs = loader.load_and_split(text_splitter=textsplitter)
+
         elif self.file_path.lower().endswith(".md"):
+
             loader = UnstructuredFileLoader(self.file_path, mode="elements")
+
             docs = loader.load()
+
         elif self.file_path.lower().endswith(".txt"):
+
             loader = TextLoader(self.file_path, autodetect_encoding=True)
+
             texts_splitter = ChineseTextSplitter(pdf=False, sentence_size=sentence_size)
+
             docs = loader.load_and_split(texts_splitter)
+
         elif self.file_path.lower().endswith(".pdf"):
+
             loader = UnstructuredPaddlePDFLoader(self.file_path, ocr_engine)
+
             texts_splitter = ChineseTextSplitter(pdf=True, sentence_size=sentence_size)
+
             docs = loader.load_and_split(texts_splitter)
-        elif self.file_path.lower().endswith(".jpg") or self.file_path.lower().endswith(
-                ".png") or self.file_path.lower().endswith(".jpeg"):
+
+        elif self.file_path.lower().endswith(".jpg") or self.file_path.lower().endswith(".png") or self.file_path.lower().endswith(".jpeg"):
+
             loader = UnstructuredPaddleImageLoader(self.file_path, ocr_engine, mode="elements")
+
             texts_splitter = ChineseTextSplitter(pdf=False, sentence_size=sentence_size)
+
             docs = loader.load_and_split(text_splitter=texts_splitter)
+
         elif self.file_path.lower().endswith(".docx"):
+
             loader = UnstructuredWordDocumentLoader(self.file_path, mode="elements")
+
             texts_splitter = ChineseTextSplitter(pdf=False, sentence_size=sentence_size)
+
             docs = loader.load_and_split(texts_splitter)
+
         elif self.file_path.lower().endswith(".xlsx"):
+
             # loader = UnstructuredExcelLoader(self.file_path, mode="elements")
+
             csv_file_path = self.file_path[:-5] + '.csv'
+
             xlsx = pd.read_excel(self.file_path, engine='openpyxl')
             xlsx.to_csv(csv_file_path, index=False)
+
             loader = CSVLoader(csv_file_path, csv_args={"delimiter": ",", "quotechar": '"'})
+
             docs = loader.load()
+
         elif self.file_path.lower().endswith(".pptx"):
+
             loader = UnstructuredPowerPointLoader(self.file_path, mode="elements")
+
             docs = loader.load()
+
         elif self.file_path.lower().endswith(".eml"):
+
             loader = UnstructuredEmailLoader(self.file_path, mode="elements")
+
             docs = loader.load()
+
         elif self.file_path.lower().endswith(".csv"):
+
             loader = CSVLoader(self.file_path, csv_args={"delimiter": ",", "quotechar": '"'})
+
             docs = loader.load()
+
         else:
+
             raise TypeError("文件类型不支持，目前仅支持：[md,txt,pdf,jpg,png,jpeg,docx,xlsx,pptx,eml,csv]")
+
         if using_zh_title_enhance:
+
             debug_logger.info("using_zh_title_enhance %s", using_zh_title_enhance)
+
             docs = zh_title_enhance(docs)
 
         # 重构docs，如果doc的文本长度大于800tokens，则利用text_splitter将其拆分成多个doc

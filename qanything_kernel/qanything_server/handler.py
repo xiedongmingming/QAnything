@@ -313,60 +313,95 @@ async def clean_files_by_status(req: request):
 
 
 async def local_doc_chat(req: request):
+
     local_doc_qa: LocalDocQA = req.app.ctx.local_doc_qa
+
     user_id = safe_get(req, 'user_id')
+
     if user_id is None:
+
         return sanic_json({"code": 2002, "msg": f'输入非法！request.json：{req.json}，请检查！'})
+
     is_valid = validate_user_id(user_id)
+
     if not is_valid:
+
         return sanic_json({"code": 2005, "msg": get_invalid_user_id_msg(user_id=user_id)})
+
     debug_logger.info('local_doc_chat %s', user_id)
+
     kb_ids = safe_get(req, 'kb_ids')
     question = safe_get(req, 'question')
     rerank = safe_get(req, 'rerank', default=True)
+
     debug_logger.info('rerank %s', rerank)
+
     streaming = safe_get(req, 'streaming', False)
+
     history = safe_get(req, 'history', [])
+
     debug_logger.info("history: %s ", history)
     debug_logger.info("question: %s", question)
     debug_logger.info("kb_ids: %s", kb_ids)
     debug_logger.info("user_id: %s", user_id)
 
     not_exist_kb_ids = local_doc_qa.milvus_summary.check_kb_exist(user_id, kb_ids)
+
     if not_exist_kb_ids:
+
         return sanic_json({"code": 2003, "msg": "fail, knowledge Base {} not found".format(not_exist_kb_ids)})
 
     file_infos = []
+
     milvus_kb = local_doc_qa.match_milvus_kb(user_id, kb_ids)
+
     for kb_id in kb_ids:
+
         file_infos.extend(local_doc_qa.milvus_summary.get_files(user_id, kb_id))
+
     valid_files = [fi for fi in file_infos if fi[2] == 'green']
+
     if len(valid_files) == 0:
+
         return sanic_json({"code": 200, "msg": "当前知识库为空，请上传文件或等待文件解析完毕", "question": question,
                            "response": "All knowledge bases {} are empty or haven't green file, please upload files".format(
                                kb_ids), "history": history, "source_documents": [{}]})
     else:
+
         debug_logger.info("streaming: %s", streaming)
+
         if streaming:
+
             debug_logger.info("start generate answer")
 
             async def generate_answer(response):
+
                 debug_logger.info("start generate...")
+
                 for resp, next_history in local_doc_qa.get_knowledge_based_answer(
                         query=question, milvus_kb=milvus_kb, chat_history=history, streaming=True, rerank=rerank
                 ):
+
                     chunk_data = resp["result"]
+
                     if not chunk_data:
+
                         continue
+
                     chunk_str = chunk_data[6:]
+
                     if chunk_str.startswith("[DONE]"):
+
                         source_documents = []
+
                         for inum, doc in enumerate(resp["source_documents"]):
+
                             source_info = {'file_id': doc.metadata['file_id'],
                                            'file_name': doc.metadata['file_name'],
                                            'content': doc.page_content,
                                            'retrieval_query': doc.metadata['retrieval_query'],
                                            'score': str(doc.metadata['score'])}
+
                             source_documents.append(source_info)
 
                         retrieval_documents = format_source_documents(resp["retrieval_documents"])
@@ -405,19 +440,39 @@ async def local_doc_chat(req: request):
             return response_stream
 
         else:
+
             for resp, history in local_doc_qa.get_knowledge_based_answer(
                     query=question, milvus_kb=milvus_kb, chat_history=history, streaming=False, rerank=rerank
             ):
                 pass
+
             retrieval_documents = format_source_documents(resp["retrieval_documents"])
+
             source_documents = format_source_documents(resp["source_documents"])
-            chat_data = {'user_id': user_id, 'kb_ids': kb_ids, 'query': question, 'history': history,
-                         'retrieval_documents': retrieval_documents, 'prompt': resp['prompt'], 'result': resp['result'],
-                         'source_documents': source_documents}
+
+            chat_data = {
+                'user_id': user_id,
+                'kb_ids': kb_ids,
+                'query': question,
+                'history': history,
+                'retrieval_documents': retrieval_documents,
+                'prompt': resp['prompt'],
+                'result': resp['result'],
+                'source_documents': source_documents
+            }
+
             qa_logger.info("chat_data: %s", chat_data)
+
             debug_logger.info("response: %s", chat_data['result'])
-            return sanic_json({"code": 200, "msg": "success chat", "question": question, "response": resp["result"],
-                               "history": history, "source_documents": source_documents})
+
+            return sanic_json({
+                "code": 200,
+                "msg": "success chat",
+                "question": question,
+                "response": resp["result"],
+                "history": history,
+                "source_documents": source_documents
+            })
 
 
 async def document(req: request):

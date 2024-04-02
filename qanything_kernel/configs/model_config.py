@@ -68,8 +68,10 @@ MILVUS_DB_NAME = ''
 
 MYSQL_HOST_LOCAL = 'mysql-container-local'
 MYSQL_HOST_ONLINE = 'mysql-container-local'
+
 MYSQL_PORT = 3306
 MYSQL_USER = 'root'
+
 MYSQL_PASSWORD = '123456'
 MYSQL_DATABASE = 'qanything'
 

@@ -17,7 +17,9 @@ WEIGHT2NPDTYPE = {
 
 
 class EmbeddingClient:
+
     DEFAULT_MAX_RESP_WAIT_S = 120
+
     embed_version = "local_v0.0.1_20230525_6d4019f1559aef84abc2ab8257e1ad4c"
 
     def __init__(
@@ -73,5 +75,6 @@ class EmbeddingClient:
         return embeddings_normalized.tolist()
     
     def getModelVersion(self):
+        #
         return self.embed_version
 

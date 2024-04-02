@@ -127,12 +127,17 @@ class ZiyueLLM(BaseAnswer, LLM, ABC):
         return response
     
     def stream_chat(self, prompt, history):
+
         print('stream chat', flush=True)
+
         hist_messages = OrderedDict()
+
         for k, msg in enumerate(history):
+            #
             hist_messages[k] = {"user": msg[0] if msg[0] != None else "", "chatbot": msg[1] if msg[1] != None else ""}
 
         print("hist_messages", hist_messages)
+
         data_raw = {
             "model": self.model,
             "prompt": prompt,
@@ -146,9 +151,11 @@ class ZiyueLLM(BaseAnswer, LLM, ABC):
             "stop": None}
 
         for res in self.retry_stream_requests(data_raw=data_raw, headers={"User-Agent": "fastchat Client"}):
+
             yield res
 
     def retry_stream_requests(self, data_raw, headers):
+
         response = requests.post(
             self.url,
             headers=headers,
@@ -156,26 +163,40 @@ class ZiyueLLM(BaseAnswer, LLM, ABC):
             timeout=60,
             stream=True
         )
+
         try:
+
             response.raise_for_status()
+
             for chunk in response.iter_lines(decode_unicode=False, delimiter=b"\n\n"):
+
                 delta = {"answer": ""}
+
                 if chunk:
+
                     data = chunk.decode('utf-8')[6:]
                     data = json.loads(data)
+
                     if data["error_code"] == 0:         
                         text = data['text']           
                     else:
                         text = data["text"] + f" (error_code: {data['error_code']})"
                         print(f"stream error: {text}")
+
                     delta["answer"] = text
+
                     yield "data: " + json.dumps(delta, ensure_ascii=False)
+
         except RequestException as e:
+
             print("Error sending request: {}".format(e))
+
             yield "data: " + json.dumps({"answer": "ERROR: request for llm failed."}, ensure_ascii=False)
+
         yield f"data: [DONE]\n\n"
 
     def retry_requests(self, data_raw, headers):
+
         response = requests.post(
             self.url,
             headers=headers,
@@ -183,20 +204,32 @@ class ZiyueLLM(BaseAnswer, LLM, ABC):
             timeout=60,
             stream=True
         )
+
         try:
+
             response.raise_for_status()
+
             final_response = ""
+
             for chunk in response.iter_lines(decode_unicode=False, delimiter=b"\n\n"):
+
                 if chunk:
+
                     data = chunk.decode('utf-8')[6:]
                     data = json.loads(data)
+
                     if data["error_code"] == 0:         
                         text = data['text']           
                     else:
                         text = data["text"] + f" (error_code: {data['error_code']})"
                         print(f"stream error: {text}")
+
                     final_response += text
+
         except RequestException as e:
+
             print("Error sending request: {}".format(e))
+
             final_response = "ERROR: request for llm failed."
+
         return final_response
