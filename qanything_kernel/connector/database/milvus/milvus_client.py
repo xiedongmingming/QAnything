@@ -1,22 +1,37 @@
-from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility, \
+from pymilvus import (
+    connections,
+    FieldSchema,
+    CollectionSchema,
+    DataType,
+    Collection,
+    utility,
     Partition
+)
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import asyncio
+
 from functools import partial
+
 import time
 import copy
+
 from datetime import datetime
+
 from qanything_kernel.configs.model_config import MILVUS_HOST_LOCAL, MILVUS_HOST_ONLINE, MILVUS_PORT, MILVUS_USER, MILVUS_PASSWORD, MILVUS_DB_NAME, CHUNK_SIZE, VECTOR_SEARCH_TOP_K
 from qanything_kernel.utils.custom_log import debug_logger
+
 from langchain.docstore.document import Document
+
 import math
+
 from itertools import groupby
 from typing import List
 
 # 混合检索
 from .es_client import ElasticsearchClient
-from qanything_kernel.configs.model_config import HYBRID_SEARCH
 
+from qanything_kernel.configs.model_config import HYBRID_SEARCH
 
 class MilvusFailed(Exception):
     """异常基类"""
@@ -67,7 +82,9 @@ class MilvusClient:
 
         # 混合检索
         self.hybrid_search = HYBRID_SEARCH
+
         if self.hybrid_search:
+
             self.index_name = [f"{user_id}++{kb_id}" for kb_id in kb_ids]
             self.client = ElasticsearchClient(index_name=self.index_name)
 
@@ -104,13 +121,15 @@ class MilvusClient:
 
             for cand_i, cand in enumerate(valid_results):
 
-                doc = Document(page_content=cand.entity.get('content'),
-                               metadata={
-                                    "score": cand.score,
-                                    "file_id": cand.entity.get('file_id'),
-                                    "file_name": cand.entity.get('file_name'),
-                                    "chunk_id": cand.entity.get('chunk_id')
-                               })
+                doc = Document(
+                    page_content=cand.entity.get('content'),
+                    metadata={
+                        "score": cand.score,
+                        "file_id": cand.entity.get('file_id'),
+                        "file_name": cand.entity.get('file_name'),
+                        "chunk_id": cand.entity.get('chunk_id')
+                    }
+                )
 
                 new_cands.append(doc)
 

@@ -16,15 +16,17 @@ root_dir = os.path.dirname(parent_dir)
 # 将项目根目录添加到SYS.PATH
 sys.path.append(root_dir)
 
+import argparse
+
 from handler import *
 from qanything_kernel.core.local_doc_qa import LocalDocQA
 from sanic import Sanic
 from sanic import response as sanic_response
-import argparse
 from sanic.worker.manager import WorkerManager
 
 WorkerManager.THRESHOLD = 6000
 
+#################################################################
 # 接收外部参数MODE
 parser = argparse.ArgumentParser()
 
@@ -38,6 +40,7 @@ if args.mode not in ['local', 'online']:
 
     raise ValueError('mode must be local or online')
 
+#################################################################
 app = Sanic("QAnything")
 
 # 设置请求体最大为400MB
@@ -46,12 +49,15 @@ app.config.REQUEST_MAX_SIZE = 400 * 1024 * 1024
 # 将/STATIC路径映射到STATIC文件夹
 app.static('/static', './static')
 
+#################################################################
+
+
 # CORS中间件，用于在每个响应中添加必要的头信息
 @app.middleware("response")
 async def add_cors_headers(request, response):
     #
     # response.headers["Access-Control-Allow-Origin"] = "http://10.234.10.144:5052"
-
+    #
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
@@ -72,6 +78,7 @@ async def handle_options_request(request):
         }
 
         return sanic_response.text("", headers=headers)
+
 
 @app.before_server_start
 async def init_local_doc_qa(app, loop):

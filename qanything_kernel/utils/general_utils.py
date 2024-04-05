@@ -66,6 +66,7 @@ def get_time(func):
 
 
 def safe_get(req: Request, attr: str, default=None):
+
     try:
         if attr in req.form:
             return req.form.getlist(attr)[0]
@@ -80,11 +81,16 @@ def safe_get(req: Request, attr: str, default=None):
         # """req.json执行时不校验content-type，body字段可能不能被正确解析为json"""
         # if value := req.json.get(attr):
         #     return value
+
     except BadRequest:
+
         logging.warning(f"missing {attr} in request")
+
     except Exception as e:
+
         logging.warning(f"get {attr} from request failed:")
         logging.warning(traceback.format_exc())
+
     return default
 
 
@@ -134,8 +140,10 @@ def read_files_with_extensions():
 
 
 def validate_user_id(user_id):
+
     # 定义正则表达式模式
     pattern = r'^[A-Za-z][A-Za-z0-9_]*$'
+
     # 检查是否匹配
     if isinstance(user_id, str) and re.match(pattern, user_id):
         return True
@@ -144,6 +152,8 @@ def validate_user_id(user_id):
 
 
 def num_tokens(text: str, model: str = 'gpt-3.5-turbo-0613') -> int:
-    """Return the number of tokens in a string."""
+
+    """return the number of tokens in a string."""
     encoding = tiktoken.encoding_for_model(model)
+
     return len(encoding.encode(text))

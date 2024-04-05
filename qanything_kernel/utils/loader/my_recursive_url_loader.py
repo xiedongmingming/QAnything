@@ -1,4 +1,5 @@
 from typing import Iterator, List, Optional, Set
+
 from urllib.parse import urljoin, urldefrag
 
 import requests
@@ -6,9 +7,8 @@ import requests
 from langchain.docstore.document import Document
 from langchain.document_loaders.base import BaseLoader
 
-
 class MyRecursiveUrlLoader(BaseLoader):
-    """Loads all child links from a given url."""
+    """loads all child links from a given url."""
 
     def __init__(
         self,
@@ -16,7 +16,7 @@ class MyRecursiveUrlLoader(BaseLoader):
         exclude_dirs: Optional[str] = None,
         max_depth: int = -1
     ) -> None:
-        """Initialize with URL to crawl and any subdirectories to exclude.
+        """initialize with url to crawl and any subdirectories to exclude.
 
         Args:
             url: The URL to crawl.
@@ -30,7 +30,7 @@ class MyRecursiveUrlLoader(BaseLoader):
     def get_child_links_recursive(
         self, url: str, depth: int, visited: Optional[Set[str]] = None
     ) -> Iterator[Document]:
-        """Recursively get all child links starting with the path of the input URL.
+        """recursively get all child links starting with the path of the input URL.
 
         Args:
             url: The URL to crawl.
@@ -83,9 +83,9 @@ class MyRecursiveUrlLoader(BaseLoader):
         return visited
 
     def lazy_load(self) -> Iterator[Document]:
-        """Lazy load web pages."""
+        """lazy load web pages."""
         return self.get_child_links_recursive(self.url, depth=0)
 
     def load(self) -> List[Document]:
-        """Load web pages."""
+        """load web pages."""
         return list(self.lazy_load())

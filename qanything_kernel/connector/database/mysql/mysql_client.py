@@ -1,7 +1,18 @@
-from qanything_kernel.configs.model_config import MYSQL_DATABASE, MYSQL_HOST_LOCAL, MYSQL_HOST_ONLINE, MYSQL_PASSWORD, MYSQL_PORT, MYSQL_USER
+from qanything_kernel.configs.model_config import (
+    MYSQL_DATABASE,
+    MYSQL_HOST_LOCAL,
+    MYSQL_HOST_ONLINE,
+    MYSQL_PASSWORD,
+    MYSQL_PORT,
+    MYSQL_USER
+)
+
 from qanything_kernel.utils.custom_log import debug_logger
+
 import mysql.connector
+
 from mysql.connector import pooling
+
 import uuid
 
 
@@ -20,8 +31,9 @@ class KnowledgeBaseManager:
         password = MYSQL_PASSWORD
         database = MYSQL_DATABASE
 
-        self.check_database_(host, port, user, password, database)
+        self.check_database_(host, port, user, password, database) # 确保数据库存在
 
+        #######################################
         dbconfig = {
             "host": host,
             "user": user,
@@ -64,8 +76,10 @@ class KnowledgeBaseManager:
 
         # 关闭游标
         cursor.close()
+
         # 连接到数据库
         cnx.database = database_name
+
         # 关闭数据库连接
         cnx.close()
 
@@ -155,7 +169,8 @@ class KnowledgeBaseManager:
                 debug_logger.info(e)
             else:
                 raise e
-        
+
+    ##########################################################################################
     def check_user_exist_(self, user_id):
 
         query = "SELECT user_id FROM User WHERE user_id = %s"
@@ -332,7 +347,7 @@ class KnowledgeBaseManager:
     # [文件] 向指定知识库下面增加文件
     def add_file(self, user_id, kb_id, file_name, timestamp, status="gray"):
 
-        # 如果他传回来了一个id, 那就说明这个表里肯定有
+        # 如果他传回来了一个ID, 那就说明这个表里肯定有
         if not self.check_user_exist_(user_id):
 
             return None, "invalid user_id, please check..."

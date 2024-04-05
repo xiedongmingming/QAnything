@@ -1,18 +1,27 @@
 import os
 import logging
 import uuid
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # LOG_FORMAT = "%(levelname) -5s %(asctime)s" "-1d: %(message)s"
+
 # logger = logging.getLogger()
+
 # logger.setLevel(logging.INFO)
 # logging.basicConfig(format=LOG_FORMAT)
+
 # 获取项目根目录
+
 # 获取当前脚本的绝对路径
 current_script_path = os.path.abspath(__file__)
+
 root_path = os.path.dirname(os.path.dirname(os.path.dirname(current_script_path)))
+
 UPLOAD_ROOT_PATH = os.path.join(root_path, "QANY_DB", "content")
+
 print("UPLOAD_ROOT_PATH:", UPLOAD_ROOT_PATH)
 
 # LLM streaming reponse

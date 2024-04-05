@@ -6,15 +6,16 @@ import time
 from typing import Optional
 
 import onnxruntime as ort
+
 from tritonclient import utils as client_utils
 from tritonclient.grpc import InferenceServerClient, InferInput, InferRequestedOutput
+
 from transformers import AutoTokenizer
 
 WEIGHT2NPDTYPE = {
     "fp32": np.float32,
     "fp16": np.float16,
 }
-
 
 class EmbeddingClient:
 
@@ -24,11 +25,11 @@ class EmbeddingClient:
 
     def __init__(
         self,
-        server_url: str,
-        model_name: str,
-        model_version: str,
-        tokenizer_path: str,
-        resp_wait_s: Optional[float] = None,
+        server_url: str, # localhost:embed_port
+        model_name: str, # embed
+        model_version: str, # 1
+        tokenizer_path: str, # 'qanything_kernel/connector/embedding/embedding_model_0630'
+        resp_wait_s: Optional[float] = None, # 120
     ):
         self._server_url = server_url
         self._model_name = model_name
@@ -37,7 +38,8 @@ class EmbeddingClient:
         self._tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
     def get_embedding(self, sentences, max_length=512):
-        # Setting up client
+
+        # setting up client
     
         inputs_data = self._tokenizer(sentences, padding=True, truncation=True, max_length=max_length, return_tensors='np')
         inputs_data = {k: v for k, v in inputs_data.items()}
@@ -50,12 +52,17 @@ class EmbeddingClient:
         outputs_info = {tm.name: tm for tm in model_metadata.outputs}
         output_names = list(outputs_info)
         outputs_req = [InferRequestedOutput(name_) for name_ in outputs_info]
+
         infer_inputs = []
+
         for name_ in inputs_info:
+
             data = inputs_data[name_]
+
             infer_input = InferInput(name_, data.shape, inputs_info[name_].datatype)
     
             target_np_dtype = client_utils.triton_to_np_dtype(inputs_info[name_].datatype)
+
             data = data.astype(target_np_dtype)
     
             infer_input.set_data_from_numpy(data)
@@ -68,10 +75,15 @@ class EmbeddingClient:
             outputs=outputs_req,
             client_timeout=120,
         )
+
         y_pred = {name_: results.as_numpy(name_) for name_ in output_names}
+
         embeddings = y_pred["output"][:,0]
+
         norm_arr = np.linalg.norm(embeddings, axis=1, keepdims=True)
+
         embeddings_normalized = embeddings / norm_arr
+
         return embeddings_normalized.tolist()
     
     def getModelVersion(self):

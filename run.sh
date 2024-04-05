@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 函数：更新或追加键值对到.env文件
+# 函数：更新或追加键值对到.ENV文件
 update_or_append_to_env() {
   local key=$1
   local value=$2
@@ -16,7 +16,8 @@ update_or_append_to_env() {
   fi
 }
 
-script_name=$(basename "$0")
+##################################################################
+script_name=$(basename "$0") # run.sh
 
 usage() {
   echo "Usage: $script_name [-c <llm_api>] [-i <device_id>] [-b <runtime_backend>] [-m <model_name>] [-t <conv_template>] [-p <tensor_parallel>] [-r <gpu_memory_utilization>] [-h]"
@@ -51,7 +52,9 @@ Note: You can choose the most suitable Service Startup Command based on your own
   exit 1
 }
 
-# 检查master分支是否有新代码
+##################################################################
+# 检查MASTER分支是否有新代码
+
 # 定义颜色
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -64,7 +67,7 @@ print_important_notice() {
     echo -e "${YELLOW}******************** 重要提示 ********************${NC}"
     echo -e "${YELLOW}====================================================${NC}"
     echo
-    echo -e "${RED}检测到master分支有新的代码更新，如需体验最新的功能，可以手动执行 git pull 来同步最新的代码。${NC}"
+    echo -e "${RED}检测到MASTER分支有新的代码更新，如需体验最新的功能，可以手动执行GIT-PULL来同步最新的代码。${NC}"
     echo
     sleep 5
 }
@@ -72,19 +75,19 @@ print_important_notice() {
 # 获取最新的远程仓库信息
 git fetch origin master
 
-# 获取本地master分支的最新提交
+# 获取本地MASTER分支的最新提交
 LOCAL=$(git rev-parse master)
-# 获取远程master分支的最新提交
+# 获取远程MASTER分支的最新提交
 REMOTE=$(git rev-parse origin/master)
 
 if [ $LOCAL != $REMOTE ]; then
     # 本地分支与远程分支不一致，需要更新
     print_important_notice
 else
-    echo -e "${GREEN}当前master分支已是最新，无需更新。${NC}"
+    echo -e "${GREEN}当前MASTER分支已是最新，无需更新。${NC}"
 fi
 
-
+##################################################################
 llm_api="local"
 device_id="0"
 runtime_backend="default"
@@ -108,6 +111,7 @@ while getopts ":c:i:b:m:t:p:r:h" opt; do
   esac
 done
 
+##################################################################
 # 获取大模型B数
 if [ $llm_api = 'cloud' ]; then
     model_size='0B'
@@ -117,7 +121,7 @@ else
     read -p "请输入您使用的大模型B数(示例：1.8B/3B/7B): " model_size
     # 检查是否合法，必须输入数字+B的形式，可以是小数
     if ! [[ $model_size =~ ^[0-9]+(\.[0-9]+)?B$ ]]; then
-        echo "Invalid model size. Please enter a number like '1.8B' or '3B' or '7B'."
+        echo "invalid model size. please enter a number like '1.8B' or '3B' or '7B'."
         exit 1
     fi
 fi
@@ -140,19 +144,18 @@ echo "GPUID1=${gpu_id1}, GPUID2=${gpu_id2}, device_id=${device_id}"
 
 # 检查GPU ID是否合法
 if ! [[ $gpu_id1 =~ ^[0-9]+$ ]] || ! [[ $gpu_id2 =~ ^[0-9]+$ ]]; then
-    echo "Invalid GPU IDs. Please enter IDs like '0' or '0,1'."
+    echo "invalid gpu ids. please enter ids like '0' or '0,1'."
     exit 1
 fi
 
 update_or_append_to_env "GPUID1" "$gpu_id1"
 update_or_append_to_env "GPUID2" "$gpu_id2"
 
-
-
+##################################################################
 if [ $llm_api = 'cloud' ]; then
   need_input_openai_info=1
   OPENAI_API_KEY=$(grep OPENAI_API_KEY .env | cut -d '=' -f2)
-  # 如果.env中已存在OPENAI_API_KEY的值（不为空），则询问用户是否使用上次默认值：$OPENAI_API_KEY，$OPENAI_API_BASE, $OPENAI_API_MODEL_NAME, $OPENAI_API_CONTEXT_LENGTH
+  # 如果.ENV中已存在OPENAI_API_KEY的值（不为空），则询问用户是否使用上次默认值：$OPENAI_API_KEY，$OPENAI_API_BASE, $OPENAI_API_MODEL_NAME, $OPENAI_API_CONTEXT_LENGTH
   if [ -n "$OPENAI_API_KEY" ]; then
     read -p "Do you want to use the previous OPENAI_API_KEY: $OPENAI_API_KEY? (yes/no) 是否使用上次的OPENAI_API_KEY: $OPENAI_API_KEY？(yes/no) 回车默认选yes，请输入:" use_previous
     use_previous=${use_previous:-yes}
@@ -215,15 +218,16 @@ update_or_append_to_env "GPU_MEM_UTILI" "$gpu_memory_utilization"
 # 读取环境变量中的用户信息
 source .env
 
+##################################################################
 # 检查是否存在USER_IP
 if [ -z "${USER_IP}" ]; then
     # 如果USER_IP不存在，询问用户并保存配置
-    read -p "Are you running the code on a remote server or on your local machine? (remotelocal) 您是在云服务器上还是本地机器上启动代码？(remote/local) " answer
+    read -p "are you running the code on a remote server or on your local machine? (remotelocal) 您是在云服务器上还是本地机器上启动代码？(remote/local) " answer
     if [[ $answer == "local" || $answer == "本地" ]]; then
         ip="localhost"
     else
-        read -p "Please enter the server IP address 请输入服务器公网IP地址(示例：10.234.10.144): " ip
-        echo "当前设置的远程服务器IP地址为 $ip, QAnything启动后，本地前端服务（浏览器打开[http://$ip:5052/qanything/]）将远程访问[http://$ip:8777]上的后端服务，请知悉！"
+        read -p "please enter the server ip address 请输入服务器公网IP地址(示例：10.234.10.144): " ip
+        echo "当前设置的远程服务器IP地址为 $ip, QANYTHING启动后，本地前端服务（浏览器打开[http://$ip:5052/qanything/]）将远程访问[http://$ip:8777]上的后端服务，请知悉！"
         sleep 5
     fi
 
@@ -233,15 +237,15 @@ if [ -z "${USER_IP}" ]; then
 else
     # 读取上次的配置
     ip=$USER_IP
-    read -p "Do you want to use the previous ip: $ip? (yes/no) 是否使用上次的ip: $host？(yes/no) 回车默认选yes，请输入:" use_previous
+    read -p "do you want to use the previous ip: $ip? (yes/no) 是否使用上次的IP: $host？(yes/no) 回车默认选YES，请输入:" use_previous
     use_previous=${use_previous:-yes}
     if [[ $use_previous != "yes" && $use_previous != "是" ]]; then
-        read -p "Are you running the code on a remote server or on your local machine? (remote/local) 您是在远程服务器上还是本地机器上启动代码？(remote/local) " answer
+        read -p "are you running the code on a remote server or on your local machine? (remote/local) 您是在远程服务器上还是本地机器上启动代码？(remote/local) " answer
         if [[ $answer == "local" || $answer == "本地" ]]; then
             ip="localhost"
         else
-            read -p "Please enter the server IP address 请输入服务器公网IP地址(示例：10.234.10.144): " ip
-            echo "当前设置的远程服务器IP地址为 $ip, QAnything启动后，本地前端服务（浏览器打开[http://$ip:5052/qanything/]）将远程访问[http://$ip:8777]上的后端服务，请知悉！"
+            read -p "please enter the server ip address 请输入服务器公网IP地址(示例：10.234.10.144): " ip
+            echo "当前设置的远程服务器IP地址为 $ip, QANYTHING启动后，本地前端服务（浏览器打开[http://$ip:5052/qanything/]）将远程访问[http://$ip:8777]上的后端服务，请知悉！"
             sleep 5
         fi
         # 保存新的配置
@@ -249,12 +253,13 @@ else
     fi
 fi
 
+##################################################################
 if [ -e /proc/version ]; then
   if grep -qi microsoft /proc/version || grep -qi MINGW /proc/version; then
     if grep -qi microsoft /proc/version; then
-        echo "Running under WSL"
+        echo "running under wsl"
         if [ -z "${WIN_VERSION}" ]; then
-            read -p "请输入Windows版本（WIN11/WIN10）回车默认选WIN11，请输入：" win_version
+            read -p "请输入WINDOWS版本（WIN11/WIN10）回车默认选WIN11，请输入：" win_version
             win_version=${win_version:-WIN11}
             if [[ $win_version == "WIN11" || $win_version == "WIN10" ]]; then
                 update_or_append_to_env "WIN_VERSION" "$win_version"
@@ -263,28 +268,28 @@ if [ -e /proc/version ]; then
                 exit 1
             fi
         fi
-        # win10系统不支持qanything-7b模型
+        # WIN10系统不支持QANYTHING-7b模型
         if [[ $WIN_VERSION == "WIN10" ]]; then
           if [[ $runtime_backend == "default" && $llm_api == "local" ]] || [[ $model_name == "Qwen-7B-QAnything" ]]; then
-              echo "当前系统为Windows 10，不支持Qwen-7B-QAnything模型，请重新选择其他模型，可参考：docs/QAnything_Startup_Usage_README.md"
+              echo "当前系统为WINDOWS10，不支持QWEN-7B-QANYTHING模型，请重新选择其他模型，可参考：docs/QAnything_Startup_Usage_README.md"
               exit 1
           fi
         fi
     else
-        echo "Running under git bash"
+        echo "running under git bash"
     fi
     
     if docker-compose -p user -f docker-compose-windows.yaml down |& tee /dev/tty | grep -q "services.qanything_local.deploy.resources.reservations value 'devices' does not match any of the regexes"; then
-        echo "检测到 Docker Compose 版本过低，请升级到v2.23.3或更高版本。执行docker-compose -v查看版本。"
+        echo "检测到DOCKER-COMPOSE版本过低，请升级到v2.23.3或更高版本。执行`docker-compose -v`查看版本。"
     fi
     mkdir -p volumes/es/data
     chmod 777 -R volumes/es/data
     docker-compose -p user -f docker-compose-windows.yaml up -d
     docker-compose -p user -f docker-compose-windows.yaml logs -f qanything_local
   else
-    echo "Running under native Linux"
+    echo "running under native linux"
     if docker-compose -p user -f docker-compose-linux.yaml down |& tee /dev/tty | grep -q "services.qanything_local.deploy.resources.reservations value 'devices' does not match any of the regexes"; then
-        echo "检测到 Docker Compose 版本过低，请升级到v2.23.3或更高版本。执行docker-compose -v查看版本。"
+        echo "检测到DOCKER-COMPOSE版本过低，请升级到v2.23.3或更高版本。执行`docker-compose -v`查看版本。"
     fi
     mkdir -p volumes/es/data
     chmod 777 -R volumes/es/data
@@ -293,5 +298,5 @@ if [ -e /proc/version ]; then
     # 检查日志输出
   fi
 else
-  echo "/proc/version 文件不存在。请确认自己位于Linux或Windows的WSL环境下"
+  echo "/PROC/VERSION文件不存在。请确认自己位于LINUX或WINDOWS的WSL环境下"
 fi

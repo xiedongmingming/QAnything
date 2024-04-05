@@ -22,54 +22,106 @@ INVALID_USER_ID = f"fail, Invalid user_id: . user_id 必须只含有字母，数
 
 
 async def new_knowledge_base(req: request):
+
     local_doc_qa: LocalDocQA = req.app.ctx.local_doc_qa
+
     user_id = safe_get(req, 'user_id')
+
     if user_id is None:
+
         return sanic_json({"code": 2002, "msg": f'输入非法！request.json：{req.json}，请检查！'})
+
     is_valid = validate_user_id(user_id)
+
     if not is_valid:
+
         return sanic_json({"code": 2005, "msg": get_invalid_user_id_msg(user_id=user_id)})
+
     debug_logger.info("new_knowledge_base %s", user_id)
+
     kb_name = safe_get(req, 'kb_name')
+
     kb_id = 'KB' + uuid.uuid4().hex
+
     local_doc_qa.create_milvus_collection(user_id, kb_id, kb_name)
+
     now = datetime.now()
+
     timestamp = now.strftime("%Y%m%d%H%M")
-    return sanic_json({"code": 200, "msg": "success create knowledge base {}".format(kb_id),
-                       "data": {"kb_id": kb_id, "kb_name": kb_name, "timestamp": timestamp}})
+
+    return sanic_json({
+        "code": 200,
+        "msg": "success create knowledge base {}".format(kb_id),
+        "data": {
+            "kb_id": kb_id,
+            "kb_name": kb_name,
+            "timestamp": timestamp
+        }
+    })
 
 
 async def upload_weblink(req: request):
+
     local_doc_qa: LocalDocQA = req.app.ctx.local_doc_qa
+
     user_id = safe_get(req, 'user_id')
+
     if user_id is None:
+
         return sanic_json({"code": 2002, "msg": f'输入非法！request.json：{req.json}，请检查！'})
+
     is_valid = validate_user_id(user_id)
+
     if not is_valid:
+
         return sanic_json({"code": 2005, "msg": get_invalid_user_id_msg(user_id=user_id)})
+
     debug_logger.info("upload_weblink %s", user_id)
+
     kb_id = safe_get(req, 'kb_id')
+
     url = safe_get(req, 'url')
-    mode = safe_get(req, 'mode', default='soft')  # soft代表不上传同名文件，strong表示强制上传同名文件
+
+    mode = safe_get(req, 'mode', default='soft')  # SOFT代表不上传同名文件，STRONG表示强制上传同名文件
+
     not_exist_kb_ids = local_doc_qa.milvus_summary.check_kb_exist(user_id, [kb_id])
+
     if not_exist_kb_ids:
+
         msg = "invalid kb_id: {}, please check...".format(not_exist_kb_ids)
+
         return sanic_json({"code": 2001, "msg": msg, "data": [{}]})
+
     now = datetime.now()
+
     timestamp = now.strftime("%Y%m%d%H%M")
+
     exist_files = []
+
     if mode == 'soft':
+
         exist_files = local_doc_qa.milvus_summary.check_file_exist_by_name(user_id, kb_id, [url])
+
     if exist_files:
+
         file_id, file_name, file_size, status = exist_files[0]
-        msg = f'warning，当前的mode是soft，无法上传同名文件，如果想强制上传同名文件，请设置mode：strong'
+
+        msg = f'warning，当前的MODE是SOFT，无法上传同名文件，如果想强制上传同名文件，请设置MODE：STRONG'
+
         data = [{"file_id": file_id, "file_name": url, "status": status, "bytes": file_size, "timestamp": timestamp}]
+
     else:
+
         file_id, msg = local_doc_qa.milvus_summary.add_file(user_id, kb_id, url, timestamp)
+
         local_file = LocalFile(user_id, kb_id, url, file_id, url, local_doc_qa.embeddings, is_url=True)
+
         data = [{"file_id": file_id, "file_name": url, "status": "gray", "bytes": 0, "timestamp": timestamp}]
+
         asyncio.create_task(local_doc_qa.insert_files_to_milvus(user_id, kb_id, [local_file]))
+
         msg = "success，后台正在飞速上传文件，请耐心等待"
+
     return sanic_json({"code": 200, "msg": msg, "data": data})
 
 

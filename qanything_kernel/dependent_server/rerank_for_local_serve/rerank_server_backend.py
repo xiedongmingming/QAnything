@@ -1,10 +1,18 @@
 import time
-from transformers import AutoTokenizer
+
 from copy import deepcopy
 from typing import List
+
+from transformers import AutoTokenizer
 from tritonclient import grpc as grpcclient
-from qanything_kernel.configs.model_config import LOCAL_RERANK_SERVICE_URL, LOCAL_RERANK_MAX_LENGTH, LOCAL_RERANK_MODEL_NAME, \
+
+from qanything_kernel.configs.model_config import (
+    LOCAL_RERANK_SERVICE_URL,
+    LOCAL_RERANK_MAX_LENGTH,
+    LOCAL_RERANK_MODEL_NAME,
     LOCAL_RERANK_BATCH
+)
+
 import numpy as np
 
 
@@ -79,10 +87,11 @@ class LocalRerankBackend:
         return chunk1
 
 
-    def tokenize_preproc(self,
-                         query: str,
-                         passages: List[str],
-                         ):
+    def tokenize_preproc(
+            self,
+             query: str,
+             passages: List[str],
+        ):
 
         query_inputs = self.tokenizer.encode_plus(query, truncation=False, padding=False)
 
@@ -95,23 +104,39 @@ class LocalRerankBackend:
         # 组[query, passage]对
         merge_inputs = []
         merge_inputs_idxs = []
+
         for pid, passage in enumerate(passages):
-            passage_inputs = self.tokenizer.encode_plus(passage, truncation=False, padding=False,
-                                                        add_special_tokens=False)
+
+            passage_inputs = self.tokenizer.encode_plus(
+                passage,
+                truncation=False,
+                padding=False,
+                add_special_tokens=False
+            )
+
             passage_inputs_length = len(passage_inputs['input_ids'])
 
             if passage_inputs_length <= max_passage_inputs_length:
+
                 qp_merge_inputs = self.merge_inputs(query_inputs, passage_inputs)
+
                 merge_inputs.append(qp_merge_inputs)
                 merge_inputs_idxs.append(pid)
+
             else:
+
                 start_id = 0
+
                 while start_id < passage_inputs_length:
+
                     end_id = start_id + max_passage_inputs_length
+
                     sub_passage_inputs = {k: v[start_id:end_id] for k, v in passage_inputs.items()}
+
                     start_id = end_id - overlap_tokens if end_id < passage_inputs_length else end_id
 
                     qp_merge_inputs = self.merge_inputs(query_inputs, sub_passage_inputs)
+
                     merge_inputs.append(qp_merge_inputs)
                     merge_inputs_idxs.append(pid)
 

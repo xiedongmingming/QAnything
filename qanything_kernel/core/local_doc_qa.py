@@ -1,16 +1,28 @@
-from qanything_kernel.configs.model_config import VECTOR_SEARCH_TOP_K, CHUNK_SIZE, VECTOR_SEARCH_SCORE_THRESHOLD, \
-    PROMPT_TEMPLATE, STREAMING
+from qanything_kernel.configs.model_config import (
+    VECTOR_SEARCH_TOP_K,
+    CHUNK_SIZE,
+    VECTOR_SEARCH_SCORE_THRESHOLD,
+    PROMPT_TEMPLATE,
+    STREAMING
+)
+
 from typing import List
+
 from qanything_kernel.connector.embedding.embedding_for_online import YouDaoEmbeddings
 from qanything_kernel.connector.embedding.embedding_for_local import YouDaoLocalEmbeddings
+
 import time
-from qanything_kernel.connector.llm import OpenAILLM, ZiyueLLM
+
 from langchain.schema import Document
+
+from qanything_kernel.connector.llm import OpenAILLM, ZiyueLLM
 from qanything_kernel.connector.database.mysql.mysql_client import KnowledgeBaseManager
 from qanything_kernel.connector.database.milvus.milvus_client import MilvusClient
 from qanything_kernel.utils.custom_log import debug_logger, qa_logger
-from .local_file import LocalFile
 from qanything_kernel.utils.general_utils import get_time
+
+from .local_file import LocalFile
+
 import requests
 import traceback
 import logging
@@ -18,6 +30,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 def _embeddings_hash(self):
+    #
     return hash(self.model_name)
 
 
@@ -35,9 +48,9 @@ class LocalDocQA:
         self.chunk_size: int = CHUNK_SIZE
         self.chunk_conent: bool = True
         self.score_threshold: int = VECTOR_SEARCH_SCORE_THRESHOLD
-        self.milvus_kbs: List[MilvusClient] = []
+        self.milvus_kbs: List[MilvusClient] = [] # 对应多个知识库
         self.milvus_summary: KnowledgeBaseManager = None
-        self.mode: str = None
+        self.mode: str = None # local/online
         self.local_rerank_service_url = "http://0.0.0.0:8776"
         self.ocr_url = 'http://0.0.0.0:8010/ocr'
 
@@ -69,11 +82,14 @@ class LocalDocQA:
         self.milvus_kbs.append(milvus_kb)
         self.milvus_summary.new_milvus_base(kb_id, user_id, kb_name)
 
-    def match_milvus_kb(self, user_id, kb_ids):
+    def match_milvus_kb(self, user_id, kb_ids): # 获取客户端
 
         for kb in self.milvus_kbs:
+
             if user_id == kb.user_id and kb_ids == kb.kb_ids:
+
                 debug_logger.info(f'match milvus_client: {kb}')
+
                 return kb
 
         milvus_kb = MilvusClient(self.mode, user_id, kb_ids)
