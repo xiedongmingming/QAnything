@@ -32,7 +32,7 @@ class EmbeddingClient:
         resp_wait_s: Optional[float] = None, # 120
     ):
         self._server_url = server_url
-        self._model_name = model_name
+        self._model_name = model_name # embed
         self._model_version = model_version
         self._response_wait_t = self.DEFAULT_MAX_RESP_WAIT_S if resp_wait_s is None else resp_wait_s
         self._tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)

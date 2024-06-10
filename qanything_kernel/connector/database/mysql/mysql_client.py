@@ -404,7 +404,7 @@ class KnowledgeBaseManager:
         self.execute_query_(query, (to_status, from_status), commit=True)
         
 
-    # [文件] 获取指定知识库下面所有文件的id和名称
+    # [文件] 获取指定知识库下面所有文件的ID和名称
     def get_files(self, user_id, kb_id):
 
         query = "SELECT file_id, file_name, status, file_size, content_length, timestamp FROM File WHERE kb_id = %s AND kb_id IN (SELECT kb_id FROM KnowledgeBase WHERE user_id = %s) AND deleted = 0"

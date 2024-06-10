@@ -14,6 +14,7 @@ import time
 import threading
 
 import sanic
+
 from sanic import Sanic, Request
 from sanic.response import ResponseStream
 from collections import OrderedDict
@@ -26,14 +27,18 @@ from urllib.parse import unquote
 WORKER_VERSION = "llm_v1.0.0_231221_fc212a"
 
 sys.path.append("./")
+
 from modeling_qwen import QwenTritonModel
 from utils import log_timestamp, CODES
 
 logging.getLogger().setLevel(logging.INFO)
+
 global_counter = 0
+
 model_semaphore = None
 
 parser = argparse.ArgumentParser()
+
 parser.add_argument("--host", type=str, default="0.0.0.0")
 parser.add_argument("--port", type=int, default=36001)
 parser.add_argument(
@@ -54,24 +59,34 @@ parser.add_argument(
     default=40,
     help="limit to the maximum number of semaphore"
 )
+
 args = parser.parse_args()
 
 model = QwenTritonModel(model_url=args.model_url)
-tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True, do_lower_case=False,
-                                            strip_accents=False)
+
+tokenizer = AutoTokenizer.from_pretrained(
+    args.model_path,
+    trust_remote_code=True,
+    do_lower_case=False,
+    strip_accents=False
+)
 
 app = Sanic("LLMService")
 
 
 def signal_handler(signum, frame) -> None:
+
     signal_ = "unknown signal"
+
     if signum == signal.SIGINT:
         signal_ = "signal.SIGINT"
     elif signum == signal.SIGTERM:
         signal_ = "signal.SIGTERM"
 
     for proc_ in mp.active_children():
+
         os.kill(proc_.pid, signal.SIGINT)
+
     sys.exit(0)
 
 
@@ -98,8 +113,7 @@ def generator_llm(params: OrderedDict) -> str:
 
     def parse_params(params: OrderedDict) -> Tuple:
 
-        assert (isinstance(params, dict) or isinstance(params,
-                                                       OrderedDict)), "params were expected as dict or OrderedDict, but got {}.".format(
+        assert (isinstance(params, dict) or isinstance(params, OrderedDict)), "params were expected as dict or OrderedDict, but got {}.".format(
             type(params))
 
         if type(params.get('hist_messages', {})) == str:
@@ -278,8 +292,11 @@ class WorkerStatus(object):
 status = WorkerStatus(args.limit_model_concurrency)
 
 async def release_model_semaphore():
+
     global model_semaphore, global_counter
+
     global_counter -= 1
+
     model_semaphore.release()
 
 
@@ -347,4 +364,5 @@ async def api_health_check(request: Request):
 
 
 if __name__ == "__main__":
+
     app.run(host=args.host, port=args.port, workers=4, debug=False)

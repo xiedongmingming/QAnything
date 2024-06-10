@@ -43,7 +43,7 @@ class LocalDocQA:
     def __init__(self):
 
         self.llm: object = None
-        self.embeddings: object = None
+        self.embeddings: object = None # ？？？
         self.top_k: int = VECTOR_SEARCH_TOP_K
         self.chunk_size: int = CHUNK_SIZE
         self.chunk_conent: bool = True
@@ -142,7 +142,7 @@ class LocalDocQA:
 
             try:
 
-                local_file.create_embedding()
+                local_file.create_embedding() #
 
             except Exception as e:
 
@@ -283,68 +283,107 @@ class LocalDocQA:
         return prompt
 
     def rerank_documents(self, query, source_documents):
+
         return self.rerank_documents_for_local(query, source_documents)
 
     def rerank_documents_for_local(self, query, source_documents):
-        if len(query) > 300:  # tokens数量超过300时不使用local rerank
+
+        if len(query) > 300:  # TOKENS数量超过300时不使用LOCAL RERANK
+
             return source_documents
 
         source_documents_reranked = []
+
         try:
-            response = requests.post(f"{self.local_rerank_service_url}/rerank",
-                                     json={"passages": [doc.page_content for doc in source_documents], "query": query})
+
+            response = requests.post(f"{self.local_rerank_service_url}/rerank", json={"passages": [doc.page_content for doc in source_documents], "query": query})
+
             scores = response.json()
+
             for idx, score in enumerate(scores):
+
                 source_documents[idx].metadata['score'] = score
+
                 if score < 0.35 and len(source_documents_reranked) > 0:
+
                     continue
+
                 source_documents_reranked.append(source_documents[idx])
 
             source_documents_reranked = sorted(source_documents_reranked, key=lambda x: x.metadata['score'], reverse=True)
+
         except Exception as e:
+
             debug_logger.error("rerank error: %s", traceback.format_exc())
             debug_logger.warning("rerank error, use origin retrieval docs")
+
             source_documents_reranked = sorted(source_documents, key=lambda x: x.metadata['score'], reverse=True)
 
         return source_documents_reranked
 
+    # 主要功能是从知识库（MILVUS知识库）中检索与用户查询（QUERY）相关的文档，并使用这些文档来生成基于知识的回答。
+    # 这个过程包括了检索、去重、重排序、处理源文档、生成提示（PROMPT）以及使用语言模型（LLM）生成回答
     @get_time
-    def get_knowledge_based_answer(self, query, milvus_kb, chat_history=None, streaming: bool = STREAMING,
-                                   rerank: bool = False):
+    def get_knowledge_based_answer(self, query, milvus_kb, chat_history=None, streaming: bool = STREAMING, rerank: bool = False):
+
         if chat_history is None:
+
             chat_history = []
+
         retrieval_queries = [query]
 
-        source_documents = self.get_source_documents(retrieval_queries, milvus_kb)
+        source_documents = self.get_source_documents(retrieval_queries, milvus_kb) # 传入检索查询和MILVUS知识库，获取与查询相关的源文档
 
-        deduplicated_docs = self.deduplicate_documents(source_documents)
-        retrieval_documents = sorted(deduplicated_docs, key=lambda x: x.metadata['score'], reverse=True)
-        if rerank and len(retrieval_documents) > 1:
+        deduplicated_docs = self.deduplicate_documents(source_documents) # 去除重复的文档
+
+        retrieval_documents = sorted(deduplicated_docs, key=lambda x: x.metadata['score'], reverse=True) # 对去重后的文档列表进行排序，根据文档的分数降序排列
+
+        if rerank and len(retrieval_documents) > 1: # 重排序（可选）
+
             debug_logger.info(f"use rerank, rerank docs num: {len(retrieval_documents)}")
-            retrieval_documents = self.rerank_documents(query, retrieval_documents)
 
-        source_documents = self.reprocess_source_documents(query=query,
-                                                           source_docs=retrieval_documents,
-                                                           history=chat_history,
-                                                           prompt_template=PROMPT_TEMPLATE)
-        prompt = self.generate_prompt(query=query,
-                                      source_docs=source_documents,
-                                      prompt_template=PROMPT_TEMPLATE)
+            retrieval_documents = self.rerank_documents(query, retrieval_documents) # 对文档进行重排序
+
+        source_documents = self.reprocess_source_documents( # 处理源文档：这可能包括根据用户查询、聊天历史和提示模板来调整文档内容
+            query=query,
+            source_docs=retrieval_documents,
+            history=chat_history,
+            prompt_template=PROMPT_TEMPLATE
+        )
+
+        prompt = self.generate_prompt( # 根据用户查询、处理后的源文档和提示模板生成一个提示
+            query=query,
+            source_docs=source_documents,
+            prompt_template=PROMPT_TEMPLATE
+        )
+
         t1 = time.time()
-        for answer_result in self.llm.generatorAnswer(prompt=prompt,
-                                                      history=chat_history,
-                                                      streaming=streaming):
+
+        for answer_result in self.llm.generatorAnswer(
+                prompt=prompt,
+                history=chat_history,
+                streaming=streaming
+        ):
+
             resp = answer_result.llm_output["answer"]
+
             prompt = answer_result.prompt
+
             history = answer_result.history
 
             # logging.info(f"[debug] get_knowledge_based_answer history = {history}")
             history[-1][0] = query
-            response = {"query": query,
-                        "prompt": prompt,
-                        "result": resp,
-                        "retrieval_documents": retrieval_documents,
-                        "source_documents": source_documents}
+
+            response = {
+                "query": query,
+                "prompt": prompt,
+                "result": resp,
+                "retrieval_documents": retrieval_documents,
+                "source_documents": source_documents
+            }
+
             yield response, history
+
         t2 = time.time()
+
         debug_logger.info(f"LLM time: {t2 - t1}")

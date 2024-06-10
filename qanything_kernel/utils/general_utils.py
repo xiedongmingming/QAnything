@@ -36,21 +36,31 @@ def isURL(string):
 
 
 def format_source_documents(ori_source_documents):
+
     source_documents = []
+
     for inum, doc in enumerate(ori_source_documents):
         # for inum, doc in enumerate(answer_source_documents):
-        # doc_source = doc.metadata['source']
+        #       doc_source = doc.metadata['source']
+
         file_id = doc.metadata['file_id']
+
         file_name = doc.metadata['file_name']
+
         # source_str = doc_source if isURL(doc_source) else os.path.split(doc_source)[-1]
-        source_info = {'file_id': doc.metadata['file_id'],
-                       'file_name': doc.metadata['file_name'],
-                       'content': doc.page_content,
-                       'retrieval_query': doc.metadata['retrieval_query'],
-                       'kernel': doc.metadata['kernel'],
-                       'score': str(doc.metadata['score']),
-                       'embed_version': doc.metadata['embed_version']}
+
+        source_info = {
+            'file_id': doc.metadata['file_id'],
+            'file_name': doc.metadata['file_name'],
+            'content': doc.page_content,
+            'retrieval_query': doc.metadata['retrieval_query'],
+            'kernel': doc.metadata['kernel'],
+            'score': str(doc.metadata['score']),
+            'embed_version': doc.metadata['embed_version']
+        }
+
         source_documents.append(source_info)
+
     return source_documents
 
 

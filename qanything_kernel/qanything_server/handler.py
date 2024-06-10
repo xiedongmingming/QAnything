@@ -363,7 +363,7 @@ async def clean_files_by_status(req: request):
             local_doc_qa.milvus_summary.delete_files(kb_id, gray_file_ids)
     return sanic_json({"code": 200, "msg": f"delete {status} files success", "data": gray_file_names})
 
-
+# 问答的接口实现
 async def local_doc_chat(req: request):
 
     local_doc_qa: LocalDocQA = req.app.ctx.local_doc_qa
@@ -403,9 +403,9 @@ async def local_doc_chat(req: request):
 
         return sanic_json({"code": 2003, "msg": "fail, knowledge Base {} not found".format(not_exist_kb_ids)})
 
-    file_infos = []
+    file_infos = [] # 知识库下面所有的文件ID
 
-    milvus_kb = local_doc_qa.match_milvus_kb(user_id, kb_ids)
+    milvus_kb = local_doc_qa.match_milvus_kb(user_id, kb_ids) # 对应的客户端
 
     for kb_id in kb_ids:
 
@@ -415,14 +415,20 @@ async def local_doc_chat(req: request):
 
     if len(valid_files) == 0:
 
-        return sanic_json({"code": 200, "msg": "当前知识库为空，请上传文件或等待文件解析完毕", "question": question,
-                           "response": "All knowledge bases {} are empty or haven't green file, please upload files".format(
-                               kb_ids), "history": history, "source_documents": [{}]})
+        return sanic_json({
+            "code": 200,
+            "msg": "当前知识库为空，请上传文件或等待文件解析完毕",
+            "question": question,
+            "response": "All knowledge bases {} are empty or haven't green file, please upload files".format(kb_ids),
+            "history": history,
+            "source_documents": [{}]
+        })
+
     else:
 
         debug_logger.info("streaming: %s", streaming)
 
-        if streaming:
+        if streaming: # 流式回答
 
             debug_logger.info("start generate answer")
 
@@ -431,7 +437,11 @@ async def local_doc_chat(req: request):
                 debug_logger.info("start generate...")
 
                 for resp, next_history in local_doc_qa.get_knowledge_based_answer(
-                        query=question, milvus_kb=milvus_kb, chat_history=history, streaming=True, rerank=rerank
+                        query=question,
+                        milvus_kb=milvus_kb,
+                        chat_history=history,
+                        streaming=True,
+                        rerank=rerank
                 ):
 
                     chunk_data = resp["result"]
@@ -448,21 +458,35 @@ async def local_doc_chat(req: request):
 
                         for inum, doc in enumerate(resp["source_documents"]):
 
-                            source_info = {'file_id': doc.metadata['file_id'],
-                                           'file_name': doc.metadata['file_name'],
-                                           'content': doc.page_content,
-                                           'retrieval_query': doc.metadata['retrieval_query'],
-                                           'score': str(doc.metadata['score'])}
+                            source_info = {
+                                'file_id': doc.metadata['file_id'],
+                                'file_name': doc.metadata['file_name'],
+                                'content': doc.page_content,
+                                'retrieval_query': doc.metadata['retrieval_query'],
+                                'score': str(doc.metadata['score'])
+                            }
 
                             source_documents.append(source_info)
 
                         retrieval_documents = format_source_documents(resp["retrieval_documents"])
+
                         source_documents = format_source_documents(resp["source_documents"])
-                        chat_data = {'user_info': user_id, 'kb_ids': kb_ids, 'query': question, 'history': history,
-                                     'prompt': resp['prompt'], 'result': next_history[-1][1],
-                                     'retrieval_documents': retrieval_documents, 'source_documents': source_documents}
+
+                        chat_data = {
+                            'user_info': user_id,
+                            'kb_ids': kb_ids,
+                            'query': question,
+                            'history': history,
+                            'prompt': resp['prompt'],
+                            'result': next_history[-1][1],
+                            'retrieval_documents': retrieval_documents,
+                            'source_documents': source_documents
+                        }
+
                         qa_logger.info("chat_data: %s", chat_data)
+
                         debug_logger.info("response: %s", chat_data['result'])
+
                         stream_res = {
                             "code": 200,
                             "msg": "success",
@@ -472,9 +496,13 @@ async def local_doc_chat(req: request):
                             "history": next_history,
                             "source_documents": source_documents,
                         }
+
                     else:
+
                         chunk_js = json.loads(chunk_str)
+
                         delta_answer = chunk_js["answer"]
+
                         stream_res = {
                             "code": 200,
                             "msg": "success",
@@ -483,19 +511,29 @@ async def local_doc_chat(req: request):
                             "history": [],
                             "source_documents": [],
                         }
+
                     await response.write(f"data: {json.dumps(stream_res, ensure_ascii=False)}\n\n")
+
                     if chunk_str.startswith("[DONE]"):
+
                         await response.eof()
+
                     await asyncio.sleep(0.001)
 
             response_stream = ResponseStream(generate_answer, content_type='text/event-stream')
+
             return response_stream
 
-        else:
+        else: # 非流式回答
 
             for resp, history in local_doc_qa.get_knowledge_based_answer(
-                    query=question, milvus_kb=milvus_kb, chat_history=history, streaming=False, rerank=rerank
+                    query=question,
+                    milvus_kb=milvus_kb,
+                    chat_history=history,
+                    streaming=False,
+                    rerank=rerank
             ):
+
                 pass
 
             retrieval_documents = format_source_documents(resp["retrieval_documents"])

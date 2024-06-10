@@ -150,22 +150,29 @@ class LocalFile:
 
             docs = zh_title_enhance(docs)
 
-        # 重构docs，如果doc的文本长度大于800tokens，则利用text_splitter将其拆分成多个doc
+        # 重构DOCS，如果DOC的文本长度大于800TOKENS，则利用TEXT_SPLITTER将其拆分成多个DOC
+
         # text_splitter: RecursiveCharacterTextSplitter
+
         debug_logger.info(f"before 2nd split doc lens: {len(docs)}")
         docs = text_splitter.split_documents(docs)
         debug_logger.info(f"after 2nd split doc lens: {len(docs)}")
 
-        # 这里给每个docs片段的metadata里注入file_id
+        # 这里给每个DOCS片段的METADATA里注入FILE_ID
         for doc in docs:
+
             doc.metadata["file_id"] = self.file_id
             doc.metadata["file_name"] = self.url if self.url else os.path.split(self.file_path)[-1]
+
         write_check_file(self.file_path, docs)
+
         if docs:
             debug_logger.info('langchain analysis content head: %s', docs[0].page_content[:100])
         else:
             debug_logger.info('langchain analysis docs is empty!')
+
         self.docs = docs
 
     def create_embedding(self):
+
         self.embs = self.emb_infer._get_len_safe_embeddings([doc.page_content for doc in self.docs])
